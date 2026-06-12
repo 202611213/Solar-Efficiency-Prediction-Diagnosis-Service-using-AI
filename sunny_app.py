@@ -1,3 +1,9 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import joblib
+
 st.set_page_config(page_title="태양광 AI 대시보드", page_icon="☀️", layout="wide")
 st.title("☀️ 기상 통합 데이터를 활용한 태양광 발전 효율 예측 및 유지보수 시점 진단 AI 웹서비스")
 st.markdown("본 대시보드는 실제 캐글(Kaggle) 태양광 데이터와 학습된 랜덤포레스트 모델을 활용하여 구동됩니다.")
