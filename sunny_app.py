@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import joblib
 
 st.set_page_config(page_title="태양광 AI 대시보드", page_icon="☀️", layout="wide")
@@ -68,14 +66,13 @@ with tab1:
     
     with col1:
         st.markdown("**1. 변수 간 상관관계 분석 (Heatmap)**")
-        # 안전한 컬럼들만 추려서 상관관계 계산
-        valid_cols = [c for c in ['시간', '직류전력량', '교류전력량', '당일발전량'] if c in df.columns]
-        plot_df = df[valid_cols].copy()
-        correlation_matrix = plot_df.corr()
         
-        # 🔥 대안 적용: Matplotlib 없이 한글이 100% 출력되는 데이터프레임 스타일러 히트맵 구현
-        styled_corr = correlation_matrix.style.background_gradient(cmap='coolwarm', axis=None).format("{:.2f}")
-        st.dataframe(styled_corr, use_container_width=True)
+        # 🔥 수정 사항: 복잡한 상관관계 계산 코딩을 싹 걷어내고, 준비된 완벽한 이미지를 출력합니다.
+        try:
+            st.image("heatmap.png", use_container_width=True)
+        except Exception as e:
+            st.error("⚠️ 폴더에서 'heatmap.png' 이미지를 찾을 수 없습니다. 파일명을 확인해 주세요.")
+            
         st.caption("※ 각 지표가 1에 가까울수록 서로 강한 연관성이 있음을 의미합니다.")
         
     with col2:
@@ -85,7 +82,7 @@ with tab1:
         # 컬럼 이름 가독성 좋게 변경 (차트 표시용)
         df_hourgroup.columns = ['시간(시)', '평균 직류전력량(kW)']
         
-        # 🔥 대안 적용: 한글 폰트 설정이 전혀 필요 없는 Streamlit 내장 라인 차트 사용
+        # 한글 폰트 설정이 전혀 필요 없는 Streamlit 내장 라인 차트 사용
         st.line_chart(df_hourgroup, x='시간(시)', y='평균 직류전력량(kW)', use_container_width=True)
         st.caption("※ X축: 시간(0시~24시), Y축: 평균 발전량(kW)")
 
