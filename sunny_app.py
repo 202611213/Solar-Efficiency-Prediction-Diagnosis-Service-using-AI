@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib 
 
-import matplotlib.font_manager as fm
+import matplotlib.font_manager as fm  # 이 부분들로 깔끔하게 대체하셨습니다!
 import os
 
 plt.rcParams['font.family'] = 'sans-serif'
