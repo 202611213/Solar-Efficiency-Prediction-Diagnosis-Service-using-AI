@@ -2,20 +2,15 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import joblib  # pkl 파일을 불러오기 위한 라이브러리
+import joblib 
 
-# =========================================================================
-# [중요] 라이브러리 없이 Streamlit Cloud 서버에서 한글 깨짐을 해결하는 설정
-# =========================================================================
 import matplotlib.font_manager as fm
 import os
 
-# 서버 환경(리눅스)에 기본 설치되어 있는 무난한 한글 폰트(DejaVu Sans 등)나 
-# 폰트 설정을 초기화하여 한글 깨짐을 방지합니다.
 plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
+plt.rcParams['axes.unicode_minus'] = False 
 
-# 1. 페이지 기본 설정
+
 st.set_page_config(
     page_title="태양광 AI 대시보드", 
     page_icon="☀️", 
