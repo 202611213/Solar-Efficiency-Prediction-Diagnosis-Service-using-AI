@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import koreanize_matplotlib
 import joblib  # pkl 파일을 불러오기 위한 라이브러리
 
 # 1. 페이지 기본 설정 (웹 브라우저 탭에 표시될 이름과 아이콘)
