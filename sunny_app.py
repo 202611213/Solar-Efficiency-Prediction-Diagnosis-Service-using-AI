@@ -1,13 +1,3 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import joblib
-
-# Matplotlib 한글 깨짐 방지 기본 설정
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['axes.unicode_minus'] = False 
-
 st.set_page_config(page_title="태양광 AI 대시보드", page_icon="☀️", layout="wide")
 st.title("☀️ 기상 통합 데이터를 활용한 태양광 발전 효율 예측 및 유지보수 시점 진단 AI 웹서비스")
 st.markdown("본 대시보드는 실제 캐글(Kaggle) 태양광 데이터와 학습된 랜덤포레스트 모델을 활용하여 구동됩니다.")
@@ -35,7 +25,7 @@ def load_assets():
     data = data.rename(columns=rename_dict)
     
     # 혹시라도 rename이 실패했을 경우를 대비한 최후의 보루 (첫 4개 컬럼 강제 이름 지정)
-    if '발생일시' not in data.columns and len(data.columns) >= 4:
+    if '발생일시' not in data.columns and len(data.columns) >= 5:
         data.columns.values[0] = '발생일시'
         data.columns.values[1] = '식별코드'
         data.columns.values[2] = '직류전력량'
@@ -77,23 +67,20 @@ with tab1:
         plot_df = df[valid_cols].copy()
         correlation_matrix = plot_df.corr()
         
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, ax=ax)
-        st.pyplot(fig)
+        # 🔥 대안 적용: Matplotlib 없이 한글이 100% 출력되는 데이터프레임 스타일러 히트맵 구현
+        styled_corr = correlation_matrix.style.background_gradient(cmap='coolwarm', axis=None).format("{:.2f}")
+        st.dataframe(styled_corr, use_container_width=True)
         st.caption("※ 각 지표가 1에 가까울수록 서로 강한 연관성이 있음을 의미합니다.")
         
     with col2:
         st.markdown("**2. 시간대별 평균 태양광 발전량 변화**")
         target_dc = '직류전력량' if '직류전력량' in df.columns else df.columns[2]
-        df_hourgroup = df.groupby(df['변환일시'].dt.hour)[target_dc].mean()
-        fig2, ax2 = plt.subplots(figsize=(10, 6))
-        df_hourgroup.plot(kind='line', marker='o', color='red', linewidth=2, ax=ax2)
+        df_hourgroup = df.groupby(df['변환일시'].dt.hour)[target_dc].mean().reset_index()
+        # 컬럼 이름 가독성 좋게 변경 (차트 표시용)
+        df_hourgroup.columns = ['시간(시)', '평균 직류전력량(kW)']
         
-        ax2.set_xlabel('Time (Hour)')
-        ax2.set_ylabel('Mean Power (kW)')
-        ax2.set_xticks(range(0, 25))
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        st.pyplot(fig2)
+        # 🔥 대안 적용: 한글 폰트 설정이 전혀 필요 없는 Streamlit 내장 라인 차트 사용
+        st.line_chart(df_hourgroup, x='시간(시)', y='평균 직류전력량(kW)', use_container_width=True)
         st.caption("※ X축: 시간(0시~24시), Y축: 평균 발전량(kW)")
 
     st.divider()
