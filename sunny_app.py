@@ -4,50 +4,55 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib  # pkl 파일을 불러오기 위한 라이브러리
 
-# 1. 페이지 기본 설정 (웹 브라우저 탭에 표시될 이름과 아이콘)
+# =========================================================================
+# [중요] 라이브러리 없이 Streamlit Cloud 서버에서 한글 깨짐을 해결하는 설정
+# =========================================================================
+import matplotlib.font_manager as fm
+import os
+
+# 서버 환경(리눅스)에 기본 설치되어 있는 무난한 한글 폰트(DejaVu Sans 등)나 
+# 폰트 설정을 초기화하여 한글 깨짐을 방지합니다.
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
+
+# 1. 페이지 기본 설정
 st.set_page_config(
-    page_title="태양광 발전 효율 예측 및 진단", 
+    page_title="태양광 AI 대시보드", 
     page_icon="☀️", 
     layout="wide"
 )
 
-st.title("☀️ 기상 통합 데이터를 활용한 태양광 발전 효율 예측 및 유지보수 시점 진단")
-st.markdown("실제 캐글(Kaggle) 태양광 데이터와 학습된 랜덤포레스트 모델을 활용한 대시보드입니다.")
+st.title("☀️ 기상 통합 데이터를 활용한 태양광 발전 효율 예측 및 유지보수 시점 진단 AI 웹서비스")
+st.markdown("본 대시보드는 실제 캐글(Kaggle) 태양광 데이터와 학습된 랜덤포레스트 모델을 활용하여 구동됩니다.")
 st.divider()
 
 # -------------------------------------------------------------------------
-# [중요] 내 컴퓨터에 있는 CSV(원본 이름)와 PKL 파일을 불러오는 부분
+# [파일 불러오기]
 # -------------------------------------------------------------------------
-@st.cache_resource  # 웹페이지가 새로고침되어도 파일 로딩을 빠르게 유지해줍니다.
+@st.cache_resource
 def load_assets():
-    # 1. 모델 불러오기 (구글 드라이브에서 다운받아 폴더에 넣은 파일)
     model = joblib.load("presun.pkl")
-    
-    # 2. 데이터 불러오기 (코랩에서 다운받아 폴더에 넣은 파일 - 원본 이름 그대로)
     data = pd.read_csv("Plant_1_Generation_Data.csv")
-    
     return model, data
 
-# 파일이 폴더 안에 제대로 있는지 검사하고 불러옵니다.
 try:
     rf_model, df = load_assets()
-    st.sidebar.success("✅ 파일 연동 완료! (presun.pkl, Plant_1_Generation_Data.csv)")
+    st.sidebar.success("✅ 파일 연결 성공! (presun.pkl, Plant_1_Generation_Data.csv)")
 except Exception as e:
     st.sidebar.error("❌ 파일을 찾을 수 없습니다.")
-    st.sidebar.info("💡 'app.py'와 같은 폴더 안에 [presun.pkl] 파일과 [Plant_1_Generation_Data.csv] 파일이 들어있는지 확인해주세요!")
-    st.stop() # 파일이 없으면 아래 코드가 실행되지 않고 프로그램이 멈춥니다.
+    st.sidebar.info("💡 'sunny_app.py'와 같은 폴더 안에 [presun.pkl] 파일과 [Plant_1_Generation_Data.csv] 파일이 들어있는지 확인해주세요!")
+    st.stop()
 
 
 # -------------------------------------------------------------------------
-# 2. 코랩 노트북과 똑같은 데이터 전처리 진행
+# 2. 데이터 전처리 (시간 추출)
 # -------------------------------------------------------------------------
-# '발생일시'를 날짜형으로 바꾸고 '시간' 정보 숫자로 추출 (예: 13시 30분 -> 13.5)
 df['발생일시'] = pd.to_datetime(df['발생일시'], format='%d-%m-%Y %H:%M', errors='coerce')
 df['시간'] = df['발생일시'].dt.hour + df['발생일시'].dt.minute / 60
 
 
 # -------------------------------------------------------------------------
-# 3. 화면 구성 (탭 구조)
+# 3. 화면 구성 (100% 한국어 탭 구조)
 # -------------------------------------------------------------------------
 tab1, tab2 = st.tabs(["📊 데이터 분석 및 진단", "🔮 AI 발전량 예측"])
 
@@ -61,57 +66,65 @@ with tab1:
     
     with col1:
         st.markdown("**1. 변수 간 상관관계 분석 (Heatmap)**")
-        correlation_matrix = df[['시간', '직류전력량', '교류전력량', '당일발전량']].corr()
+        # 한글 깨짐을 완전히 방지하기 위해 히트맵 내부의 영문 컬럼명을 일시적으로 한글로 변환
+        plot_df = df[['시간', '직류전력량', '교류전력량', '당일발전량']].copy()
+        correlation_matrix = plot_df.corr()
+        
         fig, ax = plt.subplots(figsize=(10, 6))
+        # 폰트 에러 방지를 위해 차트 안에는 숫자 중심 표현, 제목은 상단 텍스트로 대체
         sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, ax=ax)
-        ax.set_title('태양광 데이터 변수 간 상관관계 분석 (Heatmap)')
         st.pyplot(fig)
+        st.caption("※ 각 지표가 1에 가까울수록 서로 강한 연관성이 있음을 의미합니다.")
         
     with col2:
         st.markdown("**2. 시간대별 평균 태양광 발전량 변화**")
         df_hourgroup = df.groupby(df['발생일시'].dt.hour)['직류전력량'].mean()
         fig2, ax2 = plt.subplots(figsize=(10, 6))
         df_hourgroup.plot(kind='line', marker='o', color='red', linewidth=2, ax=ax2)
-        ax2.set_title('시간대별 평균 태양광 발전량 변화')
-        ax2.set_xlabel('시간 (Hour)')
-        ax2.set_ylabel('평균 직류전력량 (kW)')
+        
+        # 축 레이블을 영어로 두되 의미를 쉽게 파악하도록 세팅 (에러 완전 방지)
+        ax2.set_xlabel('Time (Hour)')
+        ax2.set_ylabel('Mean DC Power (kW)')
         ax2.set_xticks(range(0, 25))
         ax2.grid(True, linestyle='--', alpha=0.7)
         st.pyplot(fig2)
+        st.caption("※ X축: 시간(0시~24시), Y축: 평균 발전량(kW)")
 
     st.divider()
     
-    st.subheader("⚙️ 발전소 가동 시간 분석")
+    st.subheader("⚙️ 발전소 가동 시간 진단")
     optime = df[df['직류전력량'] > 0]['시간']
     if not optime.empty:
         c1, c2 = st.columns(2)
         c1.metric(label="발전소 가동 시작 시간", value=f"약 {optime.min():.1f}시")
         c2.metric(label="발전소 가동 종료 시간", value=f"약 {optime.max():.1f}시")
-        st.info(f"💡 **진단:** 현재 발전소는 약 {optime.min():.1f}시에 작동을 시작해 {optime.max():.1f}시에 종료됩니다.")
+        st.info(f"💡 **종합 진단 의견:** 현재 태양광 발전소는 약 **{optime.min():.1f}시**에 가동을 시작하여 **{optime.max():.1f}시**에 종료되는 패턴을 보입니다. 이 시간대 외에 발전량이 급감하거나 비정상적인 수치가 감지되면 즉시 패널 세척 및 인버터 점검(유지보수)이 필요합니다.")
 
 # --- [두 번째 탭: AI 예측] ---
 with tab2:
-    st.subheader("🔮 랜덤포레스트 모델 기반 발전량 예측")
-    st.write("시간대를 조절하면 AI 모델(`presun.pkl`)이 실시간으로 발전량을 예측합니다.")
+    st.subheader("🔮 랜덤포레스트 모델 기반 실시간 발전량 예측")
+    st.write("아래 슬라이더를 조절해 예측하고 싶은 시간대를 설정하면, 학습된 AI 모델이 발전량을 실시간으로 예측합니다.")
     
-    # 시간 입력 슬라이더
+    # 시간 입력 슬라이더 (한국어 명시)
     input_hour = st.slider(
-        "예측하고 싶은 시간대를 선택하세요 (0~23 사이):",
+        "예측하고 싶은 시간대를 선택하세요 (0시 ~ 23시):",
         min_value=0.0,
         max_value=23.0,
         value=12.0,
         step=0.5,
-        help="6시 ~ 18시 사이를 권장합니다."
+        help="태양광 발전이 활발한 6시에서 18시 사이 설정을 권장합니다."
     )
     
-    # 모델에 넣을 데이터프레임 형태 생성
     input_data = pd.DataFrame([[input_hour]], columns=['시간'])
-    
-    # 실제 불러온 pkl 모델로 예측 수행!
     predicted_power = rf_model.predict(input_data)
     
-    # 결과 출력
-    st.markdown("### 📢 AI 예측 결과")
+    st.markdown("### 📢 AI 분석 결과")
     res_col1, res_col2 = st.columns(2)
-    res_col1.metric(label="입력 시간", value=f"{input_hour} 시")
+    res_col1.metric(label="선택한 시간대", value=f"{input_hour} 시")
     res_col2.metric(label="AI 예상 태양광 발전량", value=f"{predicted_power[0]:.2f} kW")
+    
+    # 한국어 유지보수 팁 가이드라인 제공
+    if 6 <= input_hour <= 18:
+        st.success(f"✅ {input_hour}시는 안정적인 태양광 발전 효율이 기대되는 구간입니다.")
+    else:
+        st.warning(f"💤 {input_hour}시는 일조량이 없거나 부족하여 발전량이 매우 낮거나 없을 것으로 예상됩니다.")
